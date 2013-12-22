@@ -24,6 +24,9 @@
 #include "hitechnic-gyro.h"
 #include "hitechnic-irseeker-v2.h"
 
+int TURNINGSPEED = 80;
+float HEADING;
+
 void initializeRobot()
 {
   HTGYROstartCal(GYRO); //Calibrate gyro sensor, make sure robot is still
@@ -31,11 +34,43 @@ void initializeRobot()
   return;
 }
 
+//Function for turning, use: turnto(heading goal for robot relative to starting position in degrees)
+void turnto(float HEADINGGOAL)
+{
+	float ROTSPEED = 0;
+	int MOTORSPEED = 0;
+
+	//Check which way should be turned and adjust motor direction
+	if(HEADING < HEADINGGOAL)
+	{MOTORSPEED = TURNINGSPEED;}
+	else if(HEADING > HEADINGGOAL)
+	{MOTORSPEED = -TURNINGSPEED;}
+
+	//Turn on motors
+	/* To be written */
+
+	while(HEADING != HEADINGGOAL)
+	{
+		//This is where the motors actually turn, 1 ms at the time
+		wait1Msec(1);
+
+		//Get rotationspeed value from gyrosensor
+		ROTSPEED = HTGYROreadRot(GYRO);
+
+		//Jawohl, ein Riemannsumm fur die integrale!
+		HEADING += ROTSPEED * 0.001;
+
+		//Display heading on the display for testing
+		nxtDisplayCenteredBigTextLine(3, "%2.0f", HEADING);
+	}
+
+	//Turn off motors when the while loop ends, so when the heading = the heading goal
+	/* To be written */
+}
+
 task main()
 {
   initializeRobot();
 
   waitForStart(); //Wait for the beginning of autonomous phase
-
-
 }
