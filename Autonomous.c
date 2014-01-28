@@ -26,80 +26,86 @@
 #include "hitechnic-irseeker-v2.h"
 
 float TURNSPD = 30;
+float REFRESHGYRO = 20; //in ms
 
+//Starting coordinates (default x,y,r = 0,0,0)
 float xcur = 0;
 float ycur = 0;
 float rcur = 0;
 
 void initializeRobot()
 {
-  HTGYROstartCal(gyro); //Calibrate gyro sensor, make sure robot is still
+	HTGYROstartCal(gyro); //Calibrate gyro sensor, make sure robot is still
 
-  return;
+	return;
 }
 
 /*time1[T1] = 0;
 
-  while (true)
-  {
-    // Wait until 20ms has passed
-    while (time1[T1] < 20)
-      wait1Msec(1);
+while (true)
+{
+// Wait until 20ms has passed
+while (time1[T1] < 20)
+wait1Msec(1);
 
-    // Reset the timer
-    time1[T1]=0;
+// Reset the timer
+time1[T1]=0;
 
-    // Read the current rotation speed
-    rotSpeed = HTGYROreadRot(HTGYRO);
+// Read the current rotation speed
+rotSpeed = HTGYROreadRot(HTGYRO);
 
-    // Calculate the new heading by adding the amount of degrees
-    // we've turned in the last 20ms
-    // If our current rate of rotation is 100 degrees/second,
-    // then we will have turned 100 * (20/1000) = 2 degrees since
-    // the last time we measured.
-    heading += rotSpeed * 0.02;
+// Calculate the new heading by adding the amount of degrees
+// we've turned in the last 20ms
+// If our current rate of rotation is 100 degrees/second,
+// then we will have turned 100 * (20/1000) = 2 degrees since
+// the last time we measured.
+heading += rotSpeed * 0.02;
 
-    // Display our current heading on the screen
-    nxtDisplayCenteredBigTextLine(3, "%2.0f", heading);
-  }*/
+// Display our current heading on the screen
+nxtDisplayCenteredBigTextLine(3, "%2.0f", heading);
+}*/
 
 //Function for turning, use: turnto(heading goal for robot relative to starting position in degrees)
 void turnto(float rgoal)
 {
 	float rotspd = 0;
-	float motorspd;
-
-	time1[T1] = 0; //Reset timer
+	float direction;
 
 	//Check which way should be turned and adjust motor direction
 	if(rcur < rgoal)
-	{motorspd = -1 * turnspd;}
+	{
+		direction = -1;
+	}
 	else if(rcur > rgoal)
-	{motorspd = turnspd;}
+	{
+		direction = 1;
+	}
 
 	//Turn on motors
-	motor[fl] = motorspd;
-	motor[fr] = motorspd;
-	motor[bl] = motorspd;
-	motor[br] = motorspd;
+	motor[fl] = direction * TURNSPD;
+	motor[fr] = direction * TURNSPD;
+	motor[bl] = direction * TURNSPD;
+	motor[br] = direction * TURNSPD;
 
-	while(rcur > rgoal)
+	while ((direction == 1 && rcur < rgoal) || (direction == -1 && rcur > rgoal))
 	{
-		//This is where the motors actually turn, 1 ms at the time
-		wait1Msec(1);
+		time1[T1] = 0; //Reset timer
+
+		while(time1[T1] < REFRESHGYRO)
+			wait1Msec(1);
+
+		time1[T1] = 0; //Reset timer
 
 		//Get rotationspeed value from gyrosensor
 		rotspd = HTGYROreadRot(gyro);
 
 		//Jawohl, ein Riemannsumm fur die integrale!
-		rcur += rotspd * 0.001;
-
+		rcur += rotspd * (REFRESHGYRO/1000);
 
 		//Display heading on the display for testing
 		nxtDisplayCenteredBigTextLine(3, "%2.0f", rcur);
 	}
 
-	//Turn off motors when the while loop ends, so when the heading = the heading goal
 	motor[fl] = 0;
 	motor[fr] = 0;
 	motor[bl] = 0;
@@ -108,11 +114,11 @@ void turnto(float rgoal)
 
 task main()
 {
-  initializeRobot();//Calibrate sensors
+	initializeRobot();//Calibrate sensors
 
-  waitForStart(); //Wait for the beginning of autonomous phase
+	waitForStart(); //Wait for the beginning of autonomous phase
 
-  wait1Msec(1000);
+	wait1Msec(1000);
 
-  turnto(-360);
+	turnto(360);
 }
