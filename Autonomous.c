@@ -3,7 +3,7 @@
 #pragma config(Sensor, S2,     gyro,           sensorAnalogInactive)
 #pragma config(Motor,  motorA,          right,         tmotorNXT, PIDControl, reversed, encoder)
 #pragma config(Motor,  motorB,          left,          tmotorNXT, PIDControl, reversed, encoder)
-#pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
+#pragma config(Motor,  motorC,          testmount,             tmotorNXT, openLoop)
 #pragma config(Motor,  mtr_S1_C1_1,     fl,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C1_2,     bl,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     fr,            tmotorTetrix, openLoop)
@@ -46,10 +46,6 @@ float xcur = 0;
 float ycur = 0;
 float rcur = 0;
 
-float turncur;
-float turnval;
-float direction;
-
 void initializeRobot()
 {
 	HTGYROstartCal(gyro); //Calibrate gyro sensor, make sure robot is still
@@ -61,14 +57,16 @@ void initializeRobot()
 //LEGO robot
 void turn(float direction)
 {
-	motor[right] = -1 * direction * TURNSPD;
-	motor[left] = direction * TURNSPD;
+	//motor[right] = -1 * direction * TURNSPD;
+	//motor[left] = direction * TURNSPD;
+	motor[testmount] = direction * 30;
 }
 
 void still()
 {
-	motor[right] = 0;
-	motor[left] = 0;
+	//motor[right] = 0;
+	//motor[left] = 0;
+	motor[testmount] = 0;
 }
 
 
@@ -95,10 +93,9 @@ void still()
 void turnto(float rgoal)
 {
 	float rotspd = 0;
-	//float direction;
-	//float turnval;
-	//float turncur = 0;
-	turncur = 0;
+	float direction;
+	float turnval;
+	float turncur = 0;
 
 	//Check which way should be turned and adjust motor direction
 	if (rgoal >= 360)
@@ -147,8 +144,6 @@ void turnto(float rgoal)
 		nxtDisplayCenteredBigTextLine(3, "%2.0f", rcur + turncur);
 	}
 
-	PlaySound(soundBlip);
-
 	rcur = turncur + rcur;
 
 	still();
@@ -165,4 +160,5 @@ task main()
 	turnto(180);
 	PlaySound(soundBlip);
 	turnto(1);
+	PlaySound(soundBlip);
 }
