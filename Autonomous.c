@@ -39,12 +39,16 @@
 #include "hitechnic-irseeker-v2.h"
 
 float TURNSPD = 20;
-float REFRESHGYRO = 3.4; //in ms
+float REFRESHGYRO = 20; //in ms
 
 //Starting coordinates (default x,y,r = 0,0,0)
 float xcur = 0;
 float ycur = 0;
 float rcur = 0;
+
+float turncur;
+float turnval;
+float direction;
 
 void initializeRobot()
 {
@@ -91,9 +95,10 @@ void still()
 void turnto(float rgoal)
 {
 	float rotspd = 0;
-	float direction;
-	float turnval;
-	float turncur = 0;
+	//float direction;
+	//float turnval;
+	//float turncur = 0;
+	turncur = 0;
 
 	//Check which way should be turned and adjust motor direction
 	if (rgoal >= 360)
@@ -104,7 +109,7 @@ void turnto(float rgoal)
 		direction = 0;
 		turnval = 0;
 	}
-	else if (rgoal > rcur && rgoal - rcur < 180)
+	else if (rgoal > rcur && rgoal - rcur <= 180)
 	{
 		direction = 1;
 		turnval = rgoal - rcur;
@@ -117,13 +122,13 @@ void turnto(float rgoal)
 	else
 	{
 		direction = -1;
-		turnval = rgoal - rcur;
+		turnval = rcur - rgoal;
 	}
 
 	//Turn on motors
 	turn(direction);
 
-	while (turncur < turnval)
+	while (abs(turncur) < abs(turnval))
 	{
 		time1[T1] = 0; //Reset timer
 
@@ -139,8 +144,12 @@ void turnto(float rgoal)
 		turncur += rotspd * (REFRESHGYRO/1000);
 
 		//Display heading on the display for testing
-		nxtDisplayCenteredBigTextLine(3, "%2.0f", turncur);
+		nxtDisplayCenteredBigTextLine(3, "%2.0f", rcur + turncur);
 	}
+
+	PlaySound(soundBlip);
+
+	rcur = turncur + rcur;
 
 	still();
 }
@@ -153,5 +162,7 @@ task main()
 
 	wait1Msec(1000);
 
-	turnto(179);
+	turnto(180);
+	PlaySound(soundBlip);
+	turnto(1);
 }
