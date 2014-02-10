@@ -38,13 +38,24 @@
 #include "hitechnic-gyro.h"
 #include "hitechnic-irseeker-v2.h"
 
+
+//Constants
 float TURNSPD = 20;
+float MOVESPD = 30;
+
 float REFRESHGYRO = 100; //in ms
+
+float ARMUP45 = 120; //?
+float ARMCARRY = 50; //?
+float ARMDOWN = 20; //?
+
 
 //Starting coordinates (default x,y,r = 0,0,0)
 float xcur = 0;
 float ycur = 0;
 float rcur = 0;
+
+
 
 void initializeRobot()
 {
@@ -54,24 +65,7 @@ void initializeRobot()
 }
 
 
-/*LEGO robot
-void turn(float direction)
-{
-	//motor[right] = -1 * direction * TURNSPD;
-	//motor[left] = direction * TURNSPD;
-	motor[testmount] = direction * 30;
-}
 
-void still()
-{
-	//motor[right] = 0;
-	//motor[left] = 0;
-	motor[testmount] = 0;
-}
-*/
-
-
-// Tetrix robot
 void turn(float direction)
 {
 	motor[fl] = direction * TURNSPD;
@@ -80,8 +74,27 @@ void turn(float direction)
 	motor[br] = direction * TURNSPD;
 }
 
+
+
 void still()
 {
+	motor[fl] = 0;
+	motor[fr] = 0;
+	motor[bl] = 0;
+	motor[br] = 0;
+}
+
+
+
+void move(float direction, int time) //Currently works only for direction = 0
+{
+	motor[fl] = MOVESPD;
+	motor[fr] = MOVESPD;
+	motor[bl] = MOVESPD;
+	motor[br] = MOVESPD;
+
+	wait1Msec(time);
+
 	motor[fl] = 0;
 	motor[fr] = 0;
 	motor[bl] = 0;
@@ -159,10 +172,43 @@ void slitherto(float xgoal, float ygoal, float rgoal)
 
 	dy = ygoal - ycur;
 	dx = xgoal - xcur;
+}
 
 
 
+void pickup() //Untested
+{
+	servo[arml] = ARMDOWN;
+	servo[armr] = ARMDOWN;
+	motor[jawsr] = 100;
 
+	wait1Msec(1000); //Let servos move
+
+	move(0,1000); //Barge into blocks and hope to pick some up
+
+	servo[arml] = ARMCARRY;
+	servo[armr] = ARMCARRY;
+	motor[jawsr] = 50; //Saving energy while carrying
+
+	wait1Msec(1000); //Let servos move
+}
+
+
+
+void dispose(float height) //Height in cm - 45 cm, untested, currently only 45cm
+{
+	servo[arml] = ARMUP45;
+	servo[armr] = ARMUP45;
+
+	wait1Msec(1000);
+
+	move(0,300); //Highly depends on distance to crate when starting function
+
+	motor[jawsr] = -100; //Throw it all out
+
+	wait1Msec(1000);
+
+	motor[jawsr] = 0;
 }
 
 
@@ -173,10 +219,9 @@ task main()
 
 	//waitForStart(); //Wait for the beginning of autonomous phase
 
-	wait1Msec(2000);
+	wait1Msec(1000); //Stand still to make sure calibration is finished
 
-	turnto(180);
-	PlaySound(soundBlip);
-	turnto(1);
-	PlaySound(soundBlip);
+	//Testing: it should lower arm, pick up blocks, raise arm and dispose of blocks
+	pickup();
+	dispose(0);
 }
