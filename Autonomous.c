@@ -45,9 +45,9 @@ float MOVESPD = 30;
 
 float REFRESHGYRO = 100; //in ms
 
-float ARMUP45 = 120; //?
-float ARMCARRY = 50; //?
-float ARMDOWN = 20; //?
+float ARMUP45 = 64; //? Values for right servo
+float ARMCARRY = 210; //?
+float ARMDOWN = 230; //?
 
 
 //Starting coordinates (default x,y,r = 0,0,0)
@@ -56,10 +56,14 @@ float ycur = 0;
 float rcur = 0;
 
 
+int servogoal = 0;
+
 
 void initializeRobot()
 {
 	HTGYROstartCal(gyro); //Calibrate gyro sensor, make sure robot is still
+
+	servo[arml] = 230; //Set servo
 
 	return;
 }
@@ -178,35 +182,42 @@ void slitherto(float xgoal, float ygoal, float rgoal)
 
 void pickup() //Untested
 {
-	servo[arml] = ARMDOWN;
 	servo[armr] = ARMDOWN;
+	servo[arml] = ARMDOWN;
 	motor[jawsr] = 100;
 
+	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 	wait1Msec(1000); //Let servos move
+	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 
-	move(0,1000); //Barge into blocks and hope to pick some up
+	//move(0,1000); //Barge into blocks and hope to pick some up
 
-	servo[arml] = ARMCARRY;
 	servo[armr] = ARMCARRY;
+	servo[arml] = ARMCARRY;
 	motor[jawsr] = 50; //Saving energy while carrying
 
+	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 	wait1Msec(1000); //Let servos move
+	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 }
 
 
 
 void dispose(float height) //Height in cm - 45 cm, untested, currently only 45cm
 {
-	servo[arml] = ARMUP45;
 	servo[armr] = ARMUP45;
-
+	servo[arml] = ARMUP45;
+	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 	wait1Msec(1000);
+	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 
-	move(0,300); //Highly depends on distance to crate when starting function
+	//move(0,300); //Highly depends on distance to crate when starting function
 
 	motor[jawsr] = -100; //Throw it all out
 
+	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 	wait1Msec(1000);
+	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 
 	motor[jawsr] = 0;
 }
@@ -222,6 +233,22 @@ task main()
 	wait1Msec(1000); //Stand still to make sure calibration is finished
 
 	//Testing: it should lower arm, pick up blocks, raise arm and dispose of blocks
-	pickup();
-	dispose(0);
+	//pickup();
+	//PlaySound(soundBlip);
+	//dispose(0);
+
+	//Testing servovalues
+	while(servogoal < 260)
+	{
+		servo[arml] = servogoal;
+		wait1Msec(1000);
+		PlaySound(soundBlip);
+		servogoal = servogoal + 10;
+		while(nNxtButtonPressed != 2)
+		{
+			nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[arml]);
+		}
+	}
+
+
 }
