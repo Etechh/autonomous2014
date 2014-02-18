@@ -2,6 +2,7 @@
 #pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     gyro,           sensorAnalogInactive)
 #pragma config(Sensor, S3,     IR,             sensorI2CCustom)
+#pragma config(Sensor, S4,     acc,                sensorI2CCustom)
 #pragma config(Motor,  motorA,          flag,          tmotorNXT, openLoop, encoder)
 #pragma config(Motor,  motorB,          jawsr,         tmotorNXT, openLoop, encoder)
 #pragma config(Motor,  motorC,          jawsl,         tmotorNXT, openLoop, encoder)
@@ -11,8 +12,8 @@
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_1,     bl,            tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     fl,            tmotorTetrix, openLoop)
-#pragma config(Servo,  srvo_S1_C3_1,    arml,                 tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_2,    armr,                 tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_1,    armr,                 tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_2,    arml,                 tServoStandard)
 #pragma config(Servo,  srvo_S1_C3_3,    servo3,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_4,    servo4,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoNone)
@@ -37,6 +38,7 @@
 //Make sure these drivers and "common.h" are present in *\Robomatter Inc\ROBOTC Development Environment\Includes
 #include "hitechnic-gyro.h"
 #include "hitechnic-irseeker-v2.h"
+#include "hitechnic-accelerometer.h"
 
 
 //Constants
@@ -45,9 +47,13 @@ float MOVESPD = 30;
 
 float REFRESHGYRO = 100; //in ms
 
-float ARMUP45 = 64; //? Values for right servo
-float ARMCARRY = 210; //?
-float ARMDOWN = 230; //?
+int ARMUPL45 = 180;
+int ARMUPR45 = 40;
+int ARMCARRYL = 60;
+int ARMCARRYR = 170;
+int ARMDOWNL = 40;
+int ARMDOWNR = 190;
+int POSPERCM = 10;
 
 
 //Starting coordinates (default x,y,r = 0,0,0)
@@ -62,8 +68,6 @@ int servogoal = 0;
 void initializeRobot()
 {
 	HTGYROstartCal(gyro); //Calibrate gyro sensor, make sure robot is still
-
-	servo[arml] = 230; //Set servo
 
 	return;
 }
@@ -169,59 +173,61 @@ void turnto(float rgoal)
 
 
 
-void slitherto(float xgoal, float ygoal, float rgoal)
+void shiftto(float xgoal, float ygoal, float rgoal)
 {
 	float dy;
 	float dx;
 
+
 	dy = ygoal - ycur;
 	dx = xgoal - xcur;
+
+
 }
 
 
 
 void pickup() //Untested
 {
-	servo[armr] = ARMDOWN;
-	servo[arml] = ARMDOWN;
+	servo[armr] = ARMDOWNR;
+	servo[arml] = ARMDOWNL;
 	motor[jawsr] = 100;
 
-	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 	wait1Msec(1000); //Let servos move
-	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 
 	//move(0,1000); //Barge into blocks and hope to pick some up
 
-	servo[armr] = ARMCARRY;
-	servo[arml] = ARMCARRY;
+	servo[armr] = ARMCARRYR;
+	servo[arml] = ARMCARRYL;
 	motor[jawsr] = 50; //Saving energy while carrying
 
-	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 	wait1Msec(1000); //Let servos move
-	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 }
 
 
 
-void dispose(float height) //Height in cm - 45 cm, untested, currently only 45cm
+void dispose(float height) //Height in cm - 45 cm, untested
 {
-	servo[armr] = ARMUP45;
-	servo[arml] = ARMUP45;
-	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
+	servo[armr] = ARMUPR45 - POSPERCM * height;
+	servo[arml] = ARMUPL45 + POSPERCM * height;
 	wait1Msec(1000);
-	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 
 	//move(0,300); //Highly depends on distance to crate when starting function
 
 	motor[jawsr] = -100; //Throw it all out
 
-	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 	wait1Msec(1000);
-	nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[armr]);
 
 	motor[jawsr] = 0;
 }
 
+
+void checkacc()
+{
+	float xacc, yacc, zacc;
+
+	HTACreadAllAxes(acc, xacc, yacc, zacc);
+}
 
 
 task main()
@@ -233,22 +239,8 @@ task main()
 	wait1Msec(1000); //Stand still to make sure calibration is finished
 
 	//Testing: it should lower arm, pick up blocks, raise arm and dispose of blocks
-	//pickup();
-	//PlaySound(soundBlip);
-	//dispose(0);
-
-	//Testing servovalues
-	while(servogoal < 260)
-	{
-		servo[arml] = servogoal;
-		wait1Msec(1000);
-		PlaySound(soundBlip);
-		servogoal = servogoal + 10;
-		while(nNxtButtonPressed != 2)
-		{
-			nxtDisplayCenteredBigTextLine(3, "%2.0f", ServoValue[arml]);
-		}
-	}
-
+	pickup();
+	PlaySound(soundBlip);
+	dispose(0);
 
 }
