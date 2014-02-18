@@ -45,7 +45,7 @@
 float TURNSPD = 20;
 float MOVESPD = 30;
 
-float REFRESHGYRO = 100; //in ms
+float REFRESH = 5; //in ms
 
 int ARMUPL45 = 180;
 int ARMUPR45 = 40;
@@ -61,6 +61,8 @@ float xcur = 0;
 float ycur = 0;
 float rcur = 0;
 
+float vx = 0;
+float vy = 0;
 
 int servogoal = 0;
 
@@ -151,7 +153,7 @@ void turnto(float rgoal)
 	{
 		time1[T1] = 0; //Reset timer
 
-		while(time1[T1] < REFRESHGYRO)
+		while(time1[T1] < REFRESH)
 			wait1Msec(1);
 
 		time1[T1] = 0; //Reset timer
@@ -160,7 +162,7 @@ void turnto(float rgoal)
 		rotspd = HTGYROreadRot(gyro);
 
 		//Jawohl, ein Riemannsumm fur die integrale!
-		turncur += rotspd * (REFRESHGYRO/1000);
+		turncur += rotspd * (REFRESH/1000);
 
 		//Display heading on the display for testing
 		nxtDisplayCenteredBigTextLine(3, "%2.0f", rcur + turncur);
@@ -227,6 +229,12 @@ void checkacc()
 	float xacc, yacc, zacc;
 
 	HTACreadAllAxes(acc, xacc, yacc, zacc);
+
+	xcur += vx * REFRESH + .5 * xacc * REFRESH * REFRESH;
+	vx += xacc * REFRESH;
+
+	ycur += vy * REFRESH + .5 * yacc * REFRESH * REFRESH;
+	vy += yacc * REFRESH;
 }
 
 
