@@ -2,7 +2,7 @@
 #pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     gyro,           sensorAnalogInactive)
 #pragma config(Sensor, S3,     IR,             sensorI2CCustom)
-#pragma config(Sensor, S4,     acc,                sensorI2CCustom)
+#pragma config(Sensor, S4,     HTAC,                sensorI2CCustom)
 #pragma config(Motor,  motorA,          flag,          tmotorNXT, openLoop, encoder)
 #pragma config(Motor,  motorB,          jawsr,         tmotorNXT, openLoop, encoder)
 #pragma config(Motor,  motorC,          jawsl,         tmotorNXT, openLoop, encoder)
@@ -38,14 +38,14 @@
 //Make sure these drivers and "common.h" are present in *\Robomatter Inc\ROBOTC Development Environment\Includes
 #include "hitechnic-gyro.h"
 #include "hitechnic-irseeker-v2.h"
-#include "hitechnic-accelerometer.h"
+#include "hitechnic-accelerometer-float.h"
 
 
 //Constants
 float TURNSPD = 20;
 float MOVESPD = 30;
 
-float REFRESH = 5; //in ms
+float REFRESH = 1; //in ms
 
 int ARMUPL45 = 180;
 int ARMUPR45 = 40;
@@ -64,12 +64,47 @@ float rcur = 0;
 float vx = 0;
 float vy = 0;
 
+float xcal[1000], ycal[1000], zcal[1000];
+float xcald,ycald,zcald;
+float xacc, yacc;
+
+float xaxle,yaxle,zaxle;
+
+float alfa,beta;
+float tanalfa;
+float atot;
+
+float g = 981; //cm/s^2
+
 int servogoal = 0;
 
+
+void calibrateacc(int times)
+{
+	float xcaltot,ycaltot,zcaltot;
+
+	for(int i = 0; i < times; i++)
+	{
+		HTACreadAllAxes(HTAC, xcal[i], ycal[i], zcal[i]);
+  	wait1Msec(1);
+  }
+
+  for(int i = 0; i < times; i++)
+	{
+		xcaltot += xcal[i];
+		ycaltot += ycal[i];
+		zcaltot += zcal[i];
+  }
+
+  xcald = xcaltot/times;
+  ycald = ycaltot/times;
+  zcald = zcaltot/times;
+}
 
 void initializeRobot()
 {
 	HTGYROstartCal(gyro); //Calibrate gyro sensor, make sure robot is still
+	calibrateacc(1000);
 
 	return;
 }
@@ -223,12 +258,52 @@ void dispose(float height) //Height in cm - 45 cm, untested
 	motor[jawsr] = 0;
 }
 
-
-void checkacc()
+float tan(float angle)
 {
-	float xacc, yacc, zacc;
+	float tangent;
 
-	HTACreadAllAxes(acc, xacc, yacc, zacc);
+	tangent = sin(angle)/cos(angle);
+
+	return tangent;
+}
+
+/*void checkacc() //Wat
+{
+	 //203 units = 981 cm/s^2
+
+	HTACreadAllAxes(HTAC, xaxle, yaxle, zaxle);
+
+	xaxle = (xaxle/203) * 981; //Converting measurements from unit to cm/s^2
+	yaxle = (yaxle/203) * 981;
+	zaxle = (zaxle/203) * 981;
+
+	alfa = atan(zaxle/xaxle);
+	atot = xaxle/cos(alfa);
+	beta = asin(g/atot);
+	xacc = g/tan(beta);
+
+	//alfa = atan(zaxle/yaxle);
+	//atot = yaxle/cos(alfa);
+	//beta = asin(g/atot);
+	//yacc = g/tan(beta);
+
+	xcur += vx * REFRESH + .5 * xacc * REFRESH * REFRESH;
+	vx += xacc * REFRESH;
+
+	ycur += vy * REFRESH + .5 * yacc * REFRESH * REFRESH;
+	vy += yacc * REFRESH;
+}*/
+
+void checkacc() //The simple and probably wildy inaccurate version
+{
+	HTACreadAllAxes(HTAC, xaxle, yaxle, zaxle);
+
+	xaxle -= xcald; //Correcting for tilt
+	yaxle -= ycald;
+	zaxle -= zcald;
+
+	xacc = floor((xaxle/203) * 981); //Converting measurements from unit to cm/s^2
+	yacc = floor((yaxle/203) * 981);
 
 	xcur += vx * REFRESH + .5 * xacc * REFRESH * REFRESH;
 	vx += xacc * REFRESH;
@@ -246,9 +321,15 @@ task main()
 
 	wait1Msec(1000); //Stand still to make sure calibration is finished
 
-	//Testing: it should lower arm, pick up blocks, raise arm and dispose of blocks
-	pickup();
-	PlaySound(soundBlip);
-	dispose(0);
+	while(true)
+	{
+		wait1Msec(REFRESH);
+
+		checkacc();
+
+		nxtDisplayTextLine(2, "   X    Y");
+    nxtDisplayTextLine(3, "%4d %4d", xacc, yacc);
+    nxtDisplayTextLine(3, "%4d %4d", xcur, ycur);
+	}
 
 }
