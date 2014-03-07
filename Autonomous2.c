@@ -19,7 +19,7 @@
 #pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_6,    servo6,               tServoNone)
 
-#include "JoystickDriver.c"  //Include file to "handle" the Bluetooth messages.
+#include "JoystickDriver.c" //Include file to "handle" the Bluetooth messages.
 #include "hitechnic-gyro.h"
 #include "hitechnic-irseeker-v2.h"
 #include "hitechnic-accelerometer-float.h"
@@ -59,17 +59,12 @@ float _x1s = 0;
 float _y1s = 0;
 float dirx;
 float diry;
-float dx;
-float dy;
 
-float xgoal, ygoal, rgoal;
+bool atgoal = false;
 
 //Accelerometer
 float xcal, ycal, zcal;
 float xacc, yacc, zacc;
-
-
-float accx = 0;
 
 //Filling assignmentarray: don't touch
 void assignmentSet(int n, float x, float y, float r, int action) {
@@ -103,102 +98,136 @@ void initializeRobot() {
 	return;
 }
 
-void slitherto(float xg, float yg, float rg) {
+void slitherto(float xgoal, float ygoal, float rgoal) {
 	float betacor;
-
 	float spd = 30;
 	float _x2 = 0;
-
 	float rotspeed;
+	//float xgoal, ygoal;
 
-	xgoal = xg;
-	ygoal = yg;
-	rgoal = rg;
+	atgoal = false;
 
-	dy = ygoal-ycur;
-	dx = xgoal-xcur;
-
-
-	beta = atan2(dy,dx);
+	beta = atan2(ygoal-ycur,xgoal-xcur);
 	betacor = beta + degreesToRadians(rcur);
 
 	_x1 = cos(betacor);
 	_y1 = sin(betacor);
 
-	time1[T1] = 0;
-
 	dirx = sgn(xgoal-floor(xcur));
 	diry = sgn(ygoal-floor(ycur));
 
-	while((dirx == 1 && xgoal > xcur) || (dirx == -1 && xgoal < xcur) || (diry == 1 && ygoal > ycur) || (diry == -1 && ygoal < ycur) || round(rcur) != rgoal)
-	{
-		//while (round(xcur) != xgoal || round(ycur) != ygoal){// || round(rcur) != rgoal) {
-		if ((dirx == 1 && xgoal > xcur) || (dirx == -1 && xgoal < xcur)) {
-			_x1s = 1;
+	//while(atgoal == false) {
+	//if (bumped == true) {
+	//_x1 = -cos(betacor);
+	//_y1 = -sin(betacor);
+	//xgoal =
+	//}
+	//else if (backed == true) {
+	//_x1 = cos(betacor +
+
+	time1[T1] = 0;
+
+	while(atgoal == false) {//(dirx == 1 && xgoal > xcur) || (dirx == -1 && xgoal < xcur) || (diry == 1 && ygoal > ycur) || (diry == -1 && ygoal < ycur) || round(rcur) != rgoal)
+		{
+			//while (round(xcur) != xgoal || round(ycur) != ygoal){// || round(rcur) != rgoal) {
+			if ((dirx == 1 && xgoal > xcur) || (dirx == -1 && xgoal < xcur)) {
+				_x1s = 1;
+			}
+			else {
+				_x1s = 0;
+			}
+			if ((diry == 1 && ygoal > ycur) || (diry == -1 && ygoal < ycur)) {
+				_y1s = 1;
+			}
+			else {
+				_y1s = 0;
+			}
+
+			if (round(rcur) < rgoal - 5 && (_x1s || _y1s))
+				_x2 = 1;
+			else if (round(rcur) > rgoal + 5 && (_x1s || _y1s))
+				_x2 = -1;
+			else if (round(rcur) < rgoal && (_x1s || _y1s))
+				_x2 = 0.3;
+			else if (round(rcur) > rgoal && (_x1s || _y1s))
+				_x2 = -0.3;
+			else if (round(rcur) < rgoal && !(_x1s || _y1s))
+				_x2 = 1;
+			else if (round(rcur) > rgoal && !(_x1s || _y1s))
+				_x2 = -1;
+
+			if (beta/1.571 - floor(beta/1.571) > 0.785) //Oh radians....
+				alfa = 1.571 - (beta/1.571 - floor(beta/1.571));
+			else
+				alfa = beta/1.571 - floor(beta/1.571);
+
+			wait1Msec(10);
+
+			distancecm = abs(((1-c_d)/(-0.785*alfa) + 1)*((d0_1s_1+d0_1s_2)/2)*c_t*time1[T1]*0.001);
+
+			xcur += distancecm*cos(beta);
+			ycur += distancecm*sin(beta);
+
+			HTACreadAllAxes(HTAC, xacc, yacc, zacc);
+			xacc -= xcal;
+			yacc -= ycal;
+			zacc -= zcal;
+			writeDebugStreamLine("%d,%d",xacc,yacc);
+
+			rotspeed = HTGYROreadRot(gyro); //Read the current rotation speed
+			rcur += rotspeed * time1[T1]*0.001; //Magic
+			nxtDisplayCenteredBigTextLine(3, "%2.0f", rcur); //Display our current heading on the screen
+
+			if (abs(xacc) > 120 || abs(yacc) > 120) {
+				PlaySound(soundBeepBeep);
+
+				//Move in opposite direction
+				motor[fr] = spd*(_x1*_x1s-_y1*_y1s);
+				motor[br] = spd*(-_x1*_x1s-_y1*_y1s);
+				motor[bl] = spd*(-_x1*_x1s+_y1*_y1s);
+				motor[fl] = spd*(_x1*_x1s+_y1*_y1s);
+
+				time1[T1] = 0;
+
+				while (time1[T1] < 1000) {
+					time1[T2] = 0;
+
+					wait1Msec(10);
+
+					rotspeed = HTGYROreadRot(gyro); //Read the current rotation speed
+					rcur += rotspeed * time1[T2]*0.001; //Magic
+					nxtDisplayCenteredBigTextLine(3, "%2.0f", rcur);
+				}
+
+				motor[fr] = 0;
+				motor[br] = 0;
+				motor[bl] = 0;
+				motor[fl] = 0;
+
+				distancecm = abs(((1-c_d)/(-0.785*alfa) + 1)*((d0_1s_1+d0_1s_2)/2)*c_t*time1[T1]*0.001);
+
+				xcur += distancecm*cos(-beta);
+				ycur += distancecm*sin(-beta);
+
+				wait1Msec(1000);
+			}
+
+			motor[fr] = spd*(-_x1*_x1s+_y1*_y1s-_x2);
+			motor[br] = spd*(_x1*_x1s+_y1*_y1s-_x2);
+			motor[bl] = spd*(_x1*_x1s-_y1*_y1s-_x2);
+			motor[fl] = spd*(-_x1*_x1s-_y1*_y1s-_x2);
+
+			atgoal = !((dirx == 1 && xgoal > xcur) || (dirx == -1 && xgoal < xcur) || (diry == 1 && ygoal > ycur) || (diry == -1 && ygoal < ycur) || round(rcur) != rgoal);
+
+			time1[T1] = 0; //Reset timer
 		}
-		else {
-			_x1s = 0;
-		}
-		if ((diry == 1 && ygoal > ycur) || (diry == -1 && ygoal < ycur)) {
-			_y1s = 1;
-		}
-		else {
-			_y1s = 0;
-		}
+		//}
 
-		if (round(rcur) < rgoal - 5 && (_x1s || _y1s))
-			_x2 = 1;
-		else if (round(rcur) > rgoal + 5 && (_x1s || _y1s))
-			_x2 = -1;
-		else if (round(rcur) < rgoal && (_x1s || _y1s))
-			_x2 = 0.3;
-		else if (round(rcur) > rgoal && (_x1s || _y1s))
-			_x2 = -0.3;
-		else if (round(rcur) < rgoal && !(_x1s || _y1s))
-			_x2 = 1;
-		else if (round(rcur) > rgoal && !(_x1s || _y1s))
-			_x2 = -1;
-
-		if (beta/1.571 - floor(beta/1.571) > 0.785) //Oh radians....
-			alfa = 1.571 - (beta/1.571 - floor(beta/1.571));
-		else
-			alfa = beta/1.571 - floor(beta/1.571);
-
-		wait1Msec(10);
-
-		distancecm = abs(((1-c_d)/(-0.785*alfa) + 1)*((d0_1s_1+d0_1s_2)/2)*c_t*time1[T1]*0.001);
-
-		xcur += distancecm*cos(beta);
-		ycur += distancecm*sin(beta);
-
-		HTACreadAllAxes(HTAC, xacc, yacc, zacc);
-		xacc -= xcal;
-		yacc -= ycal;
-		zacc -= zcal;
-		writeDebugStreamLine("%d,%d",xacc,yacc);
-
-		rotspeed = HTGYROreadRot(gyro); //Read the current rotation speed
-		rcur += rotspeed * time1[T1]*0.001; //Magic
-		nxtDisplayCenteredBigTextLine(3, "%2.0f", rcur); //Display our current heading on the screen
-
-		if (abs(xacc) > 120 || abs(yacc) > 120) {
-
-			PlaySound(soundBeepBeep);
-			break;
-		}
-
-		motor[fr] = spd*(-_x1*_x1s+_y1*_y1s-_x2);
-		motor[br] = spd*(_x1*_x1s+_y1*_y1s-_x2);
-		motor[bl] = spd*(_x1*_x1s-_y1*_y1s-_x2);
-		motor[fl] = spd*(-_x1*_x1s-_y1*_y1s-_x2);
-
-		time1[T1] = 0; //Reset timer
+		motor[fr] = 0;
+		motor[br] = 0;
+		motor[bl] = 0;
+		motor[fl] = 0;
 	}
-
-	motor[fr] = 0;
-	motor[br] = 0;
-	motor[bl] = 0;
-	motor[fl] = 0;
 }
 
 //This function assumes that the robot only needs to move left and right to find the beacon:
@@ -331,7 +360,18 @@ void armdown() {
 void dispose() {
 }
 
+//This function assumes a correct starting position (right in front of slope)
+//It also assumes it is the last action of the robot in autonomous (as it should be), so x,y,r are incorrect after this
 void upslope() {
+	motor[fr] = 50; //Forward (fast)
+	motor[br] = 50;
+	motor[bl] = -50;
+	motor[fl] = -50;
+	wait1Msec(1500);
+	motor[fr] = 0;
+	motor[br] = 0;
+	motor[bl] = 0;
+	motor[fl] = 0;
 }
 
 task main()
