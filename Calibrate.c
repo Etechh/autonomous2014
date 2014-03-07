@@ -34,9 +34,9 @@ void drive45(int millisec) {
 }
 
 void drive0(int millisec) {
-	motor[fr] = -30;
+	motor[fr] = 30;
 	motor[br] = 30;
-	motor[bl] = 30;
+	motor[bl] = -30;
 	motor[fl] = -30;
 
 	wait1Msec(millisec);

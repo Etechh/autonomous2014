@@ -95,17 +95,15 @@ task accelerometer()
 		//writeDebugStreamLine("Ideal: %6.3f \n",z_real);
 		//writeDebugStreamLine("Measured: %6.3f [diff:%.3f]\n",z_measured,abs(z_real-z_measured));
 		//writeDebugStreamLine("Kalman: %6.3f [diff:%.3f]\n",x_est,abs(z_real - x_est));
-		writeDebugStreamLine("%d,%d,%d",time1[T1],z_measured,x_est);
+		writeDebugStreamLine("%d,%d,%d",time1[T1],xacc,yacc);
 
-		sum_error_kalman += abs(z_real - x_est);
-		sum_error_measure += abs(z_real-z_measured);
+		//sum_error_kalman += abs(z_real - x_est);
+		//sum_error_measure += abs(z_real-z_measured);
 
 		//update our last's
 		P_last = P;
 		x_est_last = x_est;
 	}
-
-	//writeDebugStreamLine("%d,%d,%d,%d,%d",time1[T1],xacc,yacc,zacc);
 
 }
 
@@ -113,17 +111,16 @@ task main()
 {
 	HTACreadAllAxes(HTAC, xcal, ycal, zcal);
 
-
 	motor[fl] = -30;
 	motor[fr] = 30;
 	motor[bl] = -30;
 	motor[br] = 30;
 
-	wait1Msec(500);
+	wait1Msec(1000);
 	time1[T1] = 0;
 	StartTask(accelerometer); //Starting when a should be 0
 
-	wait1Msec(1000);
+	wait1Msec(2000);
 
 	StopTask(accelerometer);
 
@@ -132,7 +129,7 @@ task main()
 	motor[bl] = 0;
 	motor[br] = 0;
 
-	writeDebugStreamLine("Tot err raw measured:  %f\n",sum_error_measure);
-	writeDebugStreamLine("Tot err kalman: %f\n",sum_error_kalman);
-	writeDebugStreamLine("Reduction: %d%% \n",100-(int)((sum_error_kalman/sum_error_measure)*100));
+	//writeDebugStreamLine("Tot err raw measured:  %f\n",sum_error_measure);
+	//writeDebugStreamLine("Tot err kalman: %f\n",sum_error_kalman);
+	//writeDebugStreamLine("Reduction: %d%% \n",100-(int)((sum_error_kalman/sum_error_measure)*100));
 }
